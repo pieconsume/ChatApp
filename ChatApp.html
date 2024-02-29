@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+  <title>Chat application</title>
+  <style>
+   * { position: absolute; margin: 0px; border: none; padding: 0px; outline: none;  -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; }
+   div { border-style: solid; border-width: 2px; }
+   .msg { position: static; width: 270px; height: 40px; background: #606060; border-color: #101010; }
+   </style>
+  </head>
+ <body style="background: #000000;">
+  <div id="container" style="top: 10px;  left: 10px; width: 300px; height: 600px; background: #303030; border-color: #202020; overflow-y: scroll;">
+   <div id="messages" style="width: 270px; min-height: 600px; background: #303030; border: none; display: grid; grid-auto-rows: 46px; align-content: end;"></div>
+   </div>
+  <div id="sendbox"  style="top: 618px; left: 10px; width: 300px; height: 40px;  background: #505050; border-color: #606060;" contenteditable=true></div>
+  </body>
+ <script>
+  let messagedivs = messages.getElementsByTagName("div");
+  let connected = false;
+  let ws = new WebSocket("ws://127.0.0.1:6075");
+  let startmsg = document.createElement("div"); startmsg.className = "msg"; startmsg.innerText = "Connecting...."; messages.append(startmsg);
+  ws.onopen    = ()    => { addmessage("Connected to server"); connected=true; }
+  ws.onclose   = ()    => { if (connected) { addmessage("Lost connection to server"); } else { addmessage("Failed to connect to server"); }}
+  ws.onmessage = (msg) => { msg.data.text().then((final) => { addmessage(final); }); } 
+  messages.append(startmsg);
+  sendbox.addEventListener("keydown", e => { if (event.keyCode == 13) { e.preventDefault(); if (connected) { 
+   ws.send(sendbox.innerText); 
+   sendbox.innerText = ""; 
+   } } });
+  function addmessage(msg){
+   let atbottom = container.scrollHeight-container.clientHeight<container.scrollTop+5;
+   let msgdiv = document.createElement("div");
+   msgdiv.className = "msg"; 
+   msgdiv.innerText = msg;
+   messages.append(msgdiv);
+   if (atbottom) { container.scrollTop = container.scrollHeight - container.clientHeight; }
+   if (messagedivs.length > 100) { messagedivs[0].remove(); } }
+  </script>
+ </html>
