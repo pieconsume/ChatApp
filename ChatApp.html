@@ -3,16 +3,17 @@
  <head>
   <title>Chat application</title>
   <style>
-   * { position: absolute; margin: 0px; border: none; padding: 0px; outline: none;  -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; }
-   div { border-style: solid; border-width: 2px; }
-   .msg { position: static; width: 270px; height: 40px; background: #606060; border-color: #101010; }
+   * { position: absolute; margin: 0px; border: none; padding: 0px; outline: none; }
+   div, textarea { border-style: solid; border-width: 2px; }
+   textarea { overflow-y: scroll; scrollbar-color: #404040 #606060; resize: none; }
+   .msg { position: static; width: 275px; height: 80px; background: #606060; border-color: #101010; overflow-wrap: break-word; overflow-y: scroll; }
    </style>
   </head>
  <body style="background: #000000;">
-  <div id="container" style="top: 10px;  left: 10px; width: 300px; height: 600px; background: #303030; border-color: #202020; overflow-y: scroll;">
-   <div id="messages" style="width: 270px; min-height: 600px; background: #303030; border: none; display: grid; grid-auto-rows: 46px; align-content: end;"></div>
+  <div id="container" style="top: 10px;  left: 10px; width: 300px; height: 600px; background: #303030; border-color: #202020; overflow-y: scroll; scrollbar-color: #404040 #606060;">
+   <div id="messages" style="width: 270px; min-height: 600px; background: #303030; border: none; display: grid; grid-auto-rows: 86px; align-content: end;"></div>
    </div>
-  <div id="sendbox"  style="top: 618px; left: 10px; width: 300px; height: 40px;  background: #505050; border-color: #606060;" contenteditable=true></div>
+  <textarea id="sendbox"  style="top: 618px; left: 10px; width: 300px; height: 80px;  background: #505050; border-color: #606060;"></textarea>
   </body>
  <script>
   let messagedivs = messages.getElementsByTagName("div");
@@ -21,17 +22,17 @@
   let startmsg = document.createElement("div"); startmsg.className = "msg"; startmsg.innerText = "Connecting...."; messages.append(startmsg);
   ws.onopen    = ()    => { addmessage("Connected to server"); connected=true; }
   ws.onclose   = ()    => { if (connected) { addmessage("Lost connection to server"); } else { addmessage("Failed to connect to server"); }}
-  ws.onmessage = (msg) => { msg.data.text().then((final) => { addmessage(final); }); } 
+  ws.onmessage = (msg) => { addmessage(msg.data); }
   messages.append(startmsg);
-  sendbox.addEventListener("keydown", e => { if (event.keyCode == 13) { e.preventDefault(); if (connected) { 
-   ws.send(sendbox.innerText); 
-   sendbox.innerText = ""; 
-   } } });
+  sendbox.addEventListener("keydown",     e => { if (event.keyCode == 13 && !event.shiftKey) { e.preventDefault(); if (connected) { ws.send(sendbox.value); sendbox.value = ""; } } });
+  sendbox.addEventListener("paste",       e => { if (sendbox.value.length + e.clipboardData.getData("text").length >= 400) { e.preventDefault(); } });
+  sendbox.addEventListener("beforeinput", e => { if (e.data != null && sendbox.value.length >= 400) { e.preventDefault(); } });
   function addmessage(msg){
    let atbottom = container.scrollHeight-container.clientHeight<container.scrollTop+5;
-   let msgdiv = document.createElement("div");
+   let msgdiv = document.createElement("textarea");
    msgdiv.className = "msg"; 
    msgdiv.innerText = msg;
+   msgdiv.readonly = true;
    messages.append(msgdiv);
    if (atbottom) { container.scrollTop = container.scrollHeight - container.clientHeight; }
    if (messagedivs.length > 100) { messagedivs[0].remove(); } }
