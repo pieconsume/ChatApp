@@ -2,6 +2,7 @@
 <html lang="en">
  <head>
   <title>Chat application</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
    * { position: absolute; margin: 0px; border: none; padding: 0px; outline: none; }
    div, textarea { border-style: solid; border-width: 2px; }
@@ -19,11 +20,10 @@
   let messagedivs = messages.getElementsByTagName("div");
   let connected = false;
   let ws = new WebSocket("ws://127.0.0.1:6075");
-  let startmsg = document.createElement("div"); startmsg.className = "msg"; startmsg.innerText = "Connecting...."; messages.append(startmsg);
+  addmessage("Connecting....");
   ws.onopen    = ()    => { addmessage("Connected to server"); connected=true; }
   ws.onclose   = ()    => { if (connected) { addmessage("Lost connection to server"); } else { addmessage("Failed to connect to server"); }}
   ws.onmessage = (msg) => { addmessage(msg.data); }
-  messages.append(startmsg);
   sendbox.addEventListener("keydown",     e => { if (event.keyCode == 13 && !event.shiftKey) { e.preventDefault(); if (connected) { ws.send(sendbox.value); sendbox.value = ""; } } });
   sendbox.addEventListener("paste",       e => { if (sendbox.value.length + e.clipboardData.getData("text").length >= 400) { e.preventDefault(); } });
   sendbox.addEventListener("beforeinput", e => { if (e.data != null && sendbox.value.length >= 400) { e.preventDefault(); } });
