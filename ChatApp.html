@@ -2,39 +2,58 @@
 <html lang="en">
  <head>
   <title>Chat application</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
    * { position: absolute; margin: 0px; border: none; padding: 0px; outline: none; }
    div, textarea { border-style: solid; border-width: 2px; }
-   textarea { overflow-y: scroll; scrollbar-color: #404040 #606060; resize: none; }
-   .msg { position: static; width: 275px; height: 80px; background: #606060; border-color: #101010; overflow-wrap: break-word; overflow-y: scroll; }
+   textarea { overflow-y: scroll; scrollbar-color: #404040 #606060; resize: none; overflow-wrap: break-word; }
+   .msg { position: static; width: 875px; height: 80px; background: #606060; border-color: #101010; }
    </style>
   </head>
  <body style="background: #000000;">
-  <div id="container" style="top: 10px;  left: 10px; width: 300px; height: 600px; background: #303030; border-color: #202020; overflow-y: scroll; scrollbar-color: #404040 #606060;">
-   <div id="messages" style="width: 270px; min-height: 600px; background: #303030; border: none; display: grid; grid-auto-rows: 86px; align-content: end;"></div>
+  <div id="container" style="top: 10px;  left: 10px; width: 900px; height: 600px; background: #303030; border-color: #202020; overflow-y: scroll; scrollbar-color: #404040 #606060;">
+   <div id="messages" style="width: 870px; min-height: 600px; background: #303030; border: none; display: grid; grid-auto-rows: 86px; align-content: end;"></div>
    </div>
-  <textarea id="sendbox"  style="top: 618px; left: 10px; width: 300px; height: 80px;  background: #505050; border-color: #606060;"></textarea>
+  <textarea id="sendbox"  style="top: 618px; left: 10px; width: 900px; height: 80px;  background: #505050; border-color: #606060;"></textarea>
   </body>
  <script>
-  let messagedivs = messages.getElementsByTagName("div");
+  let messagedivs = messages.getElementsByTagName("textarea");
   let connected = false;
-  let ws = new WebSocket("ws://127.0.0.1:6075");
-  addmessage("Connecting....");
-  ws.onopen    = ()    => { addmessage("Connected to server"); connected=true; }
-  ws.onclose   = ()    => { if (connected) { addmessage("Lost connection to server"); } else { addmessage("Failed to connect to server"); }}
-  ws.onmessage = (msg) => { addmessage(msg.data); }
-  sendbox.addEventListener("keydown",     e => { if (event.keyCode == 13 && !event.shiftKey) { e.preventDefault(); if (connected) { ws.send(sendbox.value); sendbox.value = ""; } } });
-  sendbox.addEventListener("paste",       e => { if (sendbox.value.length + e.clipboardData.getData("text").length >= 400) { e.preventDefault(); } });
-  sendbox.addEventListener("beforeinput", e => { if (e.data != null && sendbox.value.length >= 400) { e.preventDefault(); } });
+  let ws, ip;
+  sendbox.addEventListener("keydown",     e => { if (event.keyCode == 13 && !event.shiftKey) { e.preventDefault(); if (sendbox.value.length != 0) { handlemsg(); } } });
+  sendbox.addEventListener("paste",       e => { if (sendbox.value.length + e.clipboardData.getData("text").length >= 2000) { e.preventDefault(); } });
+  sendbox.addEventListener("beforeinput", e => { if (e.data != null && sendbox.value.length >= 2000) { e.preventDefault(); } });
+  if (document.cookie != "") { connect(document.cookie.split(" ")[0].split("=")[1]); }
+  addmessage("Send /connect <ip> to join a server");
+  function connect(server){
+   if (ws != null) { ws.close(); }
+   addmessage("Connecting....");
+   ws = new WebSocket(server); //ws://127.0.0.1:6075 ws://173.81.52.26:6075
+   ip = server;
+   let expiration = new Date(); expiration.setTime(expiration.getTime() + (24*60*60*1000));
+   ws.onopen    = ()    => { addmessage("Connected to " + ip); connected=true; }
+   ws.onclose   = ()    => { if (connected) { addmessage("Lost connection to " + ip + "\nSend /retry to attempt reconnection"); connected = false; } else { addmessage("Failed to connect to " + ip + "\nSend /retry to attempt reconnection"); ws = null; } }
+   ws.onmessage = (msg) => { addmessage(msg.data); } }
+  function handlemsg(){
+   let msg = sendbox.value;
+   sendbox.value = "";
+   if      (msg.startsWith("/")){
+    if      (msg.startsWith("/connect ")) { let server = msg.substring(9); connect(server); return; }
+    else if (msg.startsWith("/retry"))    { connect(ip); return; }
+    else if (msg.startsWith("/lh"))       { connect("ws://127.0.0.1:6075"); return; }
+    else if (msg.startsWith("/clear"))    { for (let i = 0; i < messagedivs.length;) { messagedivs[0].remove(); } return; } }
+   if (connected) { ws.send(msg); }
+   else { addmessage("You must connect to a server with /connect before sending messages"); } }
   function addmessage(msg){
    let atbottom = container.scrollHeight-container.clientHeight<container.scrollTop+5;
    let msgdiv = document.createElement("textarea");
-   msgdiv.className = "msg"; 
+   msgdiv.className = "msg";
    msgdiv.innerText = msg;
-   msgdiv.readonly = true;
+   msgdiv.readOnly  = true;
    messages.append(msgdiv);
    if (atbottom) { container.scrollTop = container.scrollHeight - container.clientHeight; }
-   if (messagedivs.length > 100) { messagedivs[0].remove(); } }
+   //if (messagedivs.length > 100) { messagedivs[0].remove(); }
+   }
+  function oldmessage(msg){
+   }
   </script>
  </html>
