@@ -58,19 +58,21 @@
       let userdiv = document.createElement("div");
       userdiv.className = "user";
       userdiv.innerText = userlist[i];
-      users.append(userdiv);} } }
+      users.append(userdiv);} }
+     else if (msg.startsWith("/history ")) {
+      let historymsg = msg.slice(8);
+      addmessage(historymsg, true);
+     } }
    else { addmessage(msg); }
    }
-  function addmessage(msg){
+  function addmessage(msg, old){
    let atbottom = msgcontainer.scrollHeight-msgcontainer.clientHeight<msgcontainer.scrollTop+5;
    let msgdiv = document.createElement("textarea");
    msgdiv.className = "msg";
    msgdiv.innerText = msg;
    msgdiv.readOnly  = true;
-   messages.append(msgdiv);
-   if (atbottom) { msgcontainer.scrollTop = msgcontainer.scrollHeight - msgcontainer.clientHeight; }
-   //if (messagedivs.length > 100) { messagedivs[0].remove(); }
-   }
+   if (old) { messages.insertBefore(msgdiv, messagedivs[0]); } else { messages.append(msgdiv); }
+   if (atbottom) { msgcontainer.scrollTop = msgcontainer.scrollHeight - msgcontainer.clientHeight; } }
   function oldmessage(msg){
    }
   </script>
