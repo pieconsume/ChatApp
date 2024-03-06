@@ -17,18 +17,20 @@
  for (let i = 0; i < size; i += 64){
   const name = accstr.substring(i, i+32).trim();
   const pass = accstr.substring(i+32, i+64).trim();
-  accountmap.set(name, pass);
-  console.log(name, pass);}
+  accountmap.set(name, pass);}
 //Events
- server.on("connection", client => {
- client.send("Do /register <username> <password> or /login <username> <password> to begin talking");
+ server.on("connection", (client, req) => {
+ console.log("new connection");
+ let userid = req.socket.remoteAddress; //Todo - switch this out with some sort of session
+ if (usermap.get(userid) == null) { client.send("Do /register <username> <password> or /login <username> <password> to begin talking"); } else { client.send("Welcome back!"); }
  client.on("message", (rawmsg) => {
+  let user = usermap.get(userid);
   if (rawmsg.isBinary) { return; }
   const msg = rawmsg.toString();
   if      (msg.length == 0) { return; }
   else if (msg.length > 2000) { client.send("Message too long"); }
-  else if (msg.startsWith("/")){ 
-   if (msg.startsWith("/register ")){
+  else if (msg.startsWith("/")){
+   if      (msg.startsWith("/register ")){
     const full  = msg.substring(10);
     const split = full.split(" ");
     if (split.length != 2) { client.send("Incorrect arg count"); return; }
@@ -41,9 +43,8 @@
     else if (pass.length > 32)             { client.send("Password must be under 32 characters"); }
     else if (name.length < 3)              { client.send("Username must be at least 3 characters"); }
     else if (pass.length < 8)              { client.send("Password must be at least 8 characters"); }
-    else { registeraccount(name, pass); client.send("Registered account"); usermap.set(client, { username: name, spamcount: 0, lastmessage: new Date().getTime() }); broadcast(name + " joined the chat"); };
-    }
-   if (msg.startsWith("/login ")){
+    else { registeraccount(name, pass); client.send("Registered account"); usermap.set(userid, { username: name, spamcount: 0, lastmessage: new Date().getTime() }); broadcast(name + " joined the chat"); } }
+   else if (msg.startsWith("/login ")){
     const full  = msg.substring(7);
     const split = full.split(" ");
     if      (split.length != 2) { client.send("Incorrect arg count"); return; }
@@ -55,9 +56,11 @@
     else if (pass != match)    { client.send("Incorrect password"); }
     else if (name.length > 32) { client.send("Username must be under 32 characters"); }
     else if (name.length < 3)  { client.send("Username must be at least 3 characters long"); }
-    else                       { client.send("Successfully logged in"); usermap.set(client, { username: name, spamcount: 0, lastmessage: new Date().getTime() }); broadcast(name + " joined the chat"); } }
-   else if (msg.startsWith("/history ")) {} }
-  else if (usermap.get(client) == null) { client.send("You must do /register <username> <password> or /login <username> <password> before chatting"); }
+    else                       { client.send("Successfully logged in"); usermap.set(userid, { username: name, spamcount: 0, lastmessage: new Date().getTime() }); broadcast(name + " joined the chat"); } }
+   if (usermap.get(userid) != null){
+    if (msg.startsWith("/history ")) {  }
+    else if (msg.startsWith("/users")) { user.trackusers = true; client.send("/users " + Array.from(usermap.values(), x => x.username).join(",")); } } }
+  else if (usermap.get(userid) == null) { client.send("You must do /register <username> <password> or /login <username> <password> before chatting"); }
   else {
    const historysz = fs.fstatSync(msghistory, { bigint: true }).size;
    const indexessz = fs.fstatSync(msgindexes, { bigint: false }).size;
@@ -66,7 +69,7 @@
    console.log(msgindex);
    fs.writeSync(msgindexes, fileindex);
    fs.writeSync(msghistory, msg);
-   const user   = usermap.get(client);
+   const user   = usermap.get(req.socket.remoteAddress);
    user.spamcount++;
    user.spamcount -= ((new Date().getTime()-user.lastmessage) / 1000);
    if (user.spamcount < 0) { user.spamcount = 0 };

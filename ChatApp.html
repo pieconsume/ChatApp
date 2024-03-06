@@ -5,13 +5,19 @@
   <style>
    * { position: absolute; margin: 0px; border: none; padding: 0px; outline: none; }
    div, textarea { border-style: solid; border-width: 2px; }
-   textarea { overflow-y: scroll; scrollbar-color: #404040 #606060; resize: none; overflow-wrap: break-word; }
-   .msg { position: static; width: 875px; height: 80px; background: #606060; border-color: #101010; }
+   textarea { resize: none; overflow-wrap: break-word; }
+   textarea, .container { overflow-y: scroll; scrollbar-color: #404040 #606060; }
+   .list { border: none; display: grid; width: 100%; min-height: 100%; }
+   .msg  { position: static; width: 100%; box-sizing: border-box; height: 80px; background: #606060; border-color: #101010; }
+   .user { position: static; width: 100%; box-sizing: border-box; height: 20px; background: #606060; border-color: #101010; font-size: 14px;}
    </style>
   </head>
  <body style="background: #000000;">
-  <div id="container" style="top: 10px;  left: 10px; width: 900px; height: 600px; background: #303030; border-color: #202020; overflow-y: scroll; scrollbar-color: #404040 #606060;">
-   <div id="messages" style="width: 870px; min-height: 600px; background: #303030; border: none; display: grid; grid-auto-rows: 86px; align-content: end;"></div>
+  <div id="msgcontainer"  class="container" style="top: 10px; left: 10px;  width: 900px; height: 600px; background: #303030; border-color: #202020;">
+   <div id="messages" class="list" style="background: #303030; grid-auto-rows: 82px; align-content: end;"></div>
+   </div>
+  <div id="usercontainer" class="container" style="top: 10px; left: 916px; width: 260px; height: 688px; background: #404040; border-color: #202020;">
+   <div id="users" class="list" style="grid-auto-rows: 22px;"></div>
    </div>
   <textarea id="sendbox"  style="top: 618px; left: 10px; width: 900px; height: 80px;  background: #505050; border-color: #606060;"></textarea>
   </body>
@@ -19,7 +25,7 @@
   let messagedivs = messages.getElementsByTagName("textarea");
   let connected = false;
   let ws, ip;
-  sendbox.addEventListener("keydown",     e => { if (event.keyCode == 13 && !event.shiftKey) { e.preventDefault(); if (sendbox.value.length != 0) { handlemsg(); } } });
+  sendbox.addEventListener("keydown",     e => { if (event.keyCode == 13 && !event.shiftKey) { e.preventDefault(); if (sendbox.value.length != 0) { handleinput(); } } });
   sendbox.addEventListener("paste",       e => { if (sendbox.value.length + e.clipboardData.getData("text").length >= 2000) { e.preventDefault(); } });
   sendbox.addEventListener("beforeinput", e => { if (e.data != null && sendbox.value.length >= 2000) { e.preventDefault(); } });
   if (document.cookie != "") { connect(document.cookie.split(" ")[0].split("=")[1]); }
@@ -32,8 +38,8 @@
    let expiration = new Date(); expiration.setTime(expiration.getTime() + (24*60*60*1000));
    ws.onopen    = ()    => { addmessage("Connected to " + ip); connected=true; }
    ws.onclose   = ()    => { if (connected) { addmessage("Lost connection to " + ip + "\nSend /retry to attempt reconnection"); connected = false; } else { addmessage("Failed to connect to " + ip + "\nSend /retry to attempt reconnection"); ws = null; } }
-   ws.onmessage = (msg) => { addmessage(msg.data); } }
-  function handlemsg(){
+   ws.onmessage = (msg) => { handlemsg(msg); } }
+  function handleinput(){
    let msg = sendbox.value;
    sendbox.value = "";
    if      (msg.startsWith("/")){
@@ -43,14 +49,26 @@
     else if (msg.startsWith("/clear"))    { for (let i = 0; i < messagedivs.length;) { messagedivs[0].remove(); } return; } }
    if (connected) { ws.send(msg); }
    else { addmessage("You must connect to a server with /connect before sending messages"); } }
+  function handlemsg(rawmsg){
+   let msg = rawmsg.data;
+   if (msg.startsWith("/")){
+    if (msg.startsWith("/users ")) {
+     let userlist = msg.slice(7).split(",");
+     for (let i = 0; i < userlist.length; i++){
+      let userdiv = document.createElement("div");
+      userdiv.className = "user";
+      userdiv.innerText = userlist[i];
+      users.append(userdiv);} } }
+   else { addmessage(msg); }
+   }
   function addmessage(msg){
-   let atbottom = container.scrollHeight-container.clientHeight<container.scrollTop+5;
+   let atbottom = msgcontainer.scrollHeight-msgcontainer.clientHeight<msgcontainer.scrollTop+5;
    let msgdiv = document.createElement("textarea");
    msgdiv.className = "msg";
    msgdiv.innerText = msg;
    msgdiv.readOnly  = true;
    messages.append(msgdiv);
-   if (atbottom) { container.scrollTop = container.scrollHeight - container.clientHeight; }
+   if (atbottom) { msgcontainer.scrollTop = msgcontainer.scrollHeight - msgcontainer.clientHeight; }
    //if (messagedivs.length > 100) { messagedivs[0].remove(); }
    }
   function oldmessage(msg){
